@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "vercel-connect": {
+      "source": "vercel/vercel-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/vercel-connect/SKILL.md",
+      "computedHash": "d529425456b0c2d686a78e5359014e8e8d03ee9f57cb144ca899a27f7b522419"
+    }
+  }
+}
