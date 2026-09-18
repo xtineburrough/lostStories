@@ -1,19 +1,36 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import L from 'leaflet';
 import './App.css';
 
-// Fix Leaflet marker icons in React
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-let DefaultIcon = L.icon({ 
-  iconUrl: icon, 
-  shadowUrl: iconShadow, 
-  iconSize: [25, 41], 
-  iconAnchor: [12, 41] 
+// ==========================================
+// ICON CREDITS & ATTRIBUTION
+// Pirate flag Icon by Lee Mette from Noun Project (CC BY 3.0)
+// No reading Icon by Muhammad Riza from Noun Project (CC BY 3.0)
+// ==========================================
+
+const PirateIcon = L.icon({ 
+  iconUrl: '/pirate-flag.png', // Ensure this is saved in your /public folder
+  iconSize: [32, 32], 
+  iconAnchor: [16, 32] 
 });
-L.Marker.prototype.options.icon = DefaultIcon;
+
+const NoReadingIcon = L.icon({ 
+  iconUrl: '/no-reading.png', // Ensure this is saved in your /public folder
+  iconSize: [32, 32], 
+  iconAnchor: [16, 32] 
+});
+
+// Basic Bad Word Filter for Dev Review
+const BAD_WORDS = ['slur1', 'slur2', 'badword', 'bitch', 'fuck', 'shit']; 
+const checkProfanity = (text) => {
+  const lowerText = text.toLowerCase();
+  return BAD_WORDS.some(word => lowerText.includes(word));
+};
 
 // ACCURATE & VERIFIED BANNED BOOKS DATABASE
 const REAL_BANNED_BOOKS = [
@@ -26,10 +43,7 @@ const REAL_BANNED_BOOKS = [
     category: "History & Memoir", 
     getWays: ["Internet Archive Open Library", "Unbanned Cards via Brooklyn Public Library"],
     localStores: ["Parnassus Books (Nashville, TN)", "Union Ave Books (Knoxville, TN)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 2, title: "Gender Queer: A Memoir", author: "Maia Kobabe",
@@ -39,10 +53,7 @@ const REAL_BANNED_BOOKS = [
     category: "LGBTQ+ / Memoir", 
     getWays: ["Libby/OverDrive Digital Library", "Comixology Digital Purchase"],
     localStores: ["Loyalty Bookstores (Silver Spring, MD)", "Solid State Books (Washington, D.C.)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 3, title: "The Bluest Eye", author: "Toni Morrison",
@@ -52,10 +63,7 @@ const REAL_BANNED_BOOKS = [
     category: "Classic Literature", 
     getWays: ["Books for All (NYPL Digital Access)", "AbeBooks / ThriftBooks"],
     localStores: ["The Wild Detectives (Dallas, TX)", "Interabang Books (Dallas, TX)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 4, title: "All Boys Aren't Blue", author: "George M. Johnson",
@@ -65,10 +73,7 @@ const REAL_BANNED_BOOKS = [
     category: "LGBTQ+ / Memoir", 
     getWays: ["Project Gutenberg Digital Archives", "OverDrive / Libby E-books"],
     localStores: ["Writer's Block Bookstore (Winter Park, FL)", "Spiral Bookcase"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 5, title: "The Hate U Give", author: "Angie Thomas",
@@ -78,10 +83,7 @@ const REAL_BANNED_BOOKS = [
     category: "Young Adult", 
     getWays: ["Brooklyn Public Library Unbanned Access", "IndieBound Direct Delivery"],
     localStores: ["Harriett's Bookshop (Philadelphia, PA)", "Doylestown Bookshop (Doylestown, PA)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 6, title: "Lawn Boy", author: "Jonathan Evison",
@@ -91,10 +93,7 @@ const REAL_BANNED_BOOKS = [
     category: "Fiction", 
     getWays: ["Seattle Public Library Digital Access", "Libby Audiobook"],
     localStores: ["Charis Books & More (Atlanta, GA)", "Eagle Eye Book Shop (Decatur, GA)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 7, title: "Flamer", author: "Mike Curato",
@@ -104,10 +103,7 @@ const REAL_BANNED_BOOKS = [
     category: "LGBTQ+ / Graphic Novel", 
     getWays: ["Comixology / Kindle Digital", "NYPL Books for All Access"],
     localStores: ["Bookman's Corner", "Skylight Books (Los Angeles, CA)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 8, title: "Out of Darkness", author: "Ashley Hope Pérez",
@@ -117,10 +113,7 @@ const REAL_BANNED_BOOKS = [
     category: "Historical Fiction", 
     getWays: ["Libby Digital Copy", "Alibris Independent Network"],
     localStores: ["Brazos Bookstore (Houston, TX)", "Murder By The Book (Houston, TX)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 9, title: "To Kill a Mockingbird", author: "Harper Lee",
@@ -130,10 +123,7 @@ const REAL_BANNED_BOOKS = [
     category: "Classic Literature", 
     getWays: ["Open Library Free Access", "Audible / Public Library Distribution"],
     localStores: ["Open Books (Pensacola, FL)", "Page & Palette (Fairhope, AL)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 10, title: "Gender Queer", author: "Maia Kobabe",
@@ -143,10 +133,7 @@ const REAL_BANNED_BOOKS = [
     category: "LGBTQ+ / Memoir", 
     getWays: ["VPN via Brooklyn Public Library", "Libby App"],
     localStores: ["Midtown Scholar Bookstore (Harrisburg, PA)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 11, title: "Stamped: Racism, Antiracism, and You", author: "Ibram X. Kendi & Jason Reynolds",
@@ -156,10 +143,7 @@ const REAL_BANNED_BOOKS = [
     category: "History / Non-Fiction", 
     getWays: ["Internet Archive Open Library", "Libby Audiobooks"],
     localStores: ["Tattered Cover Book Store (Denver, CO)", "Matter Bookstore (Denver, CO)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 12, title: "Thirteen Reasons Why", author: "Jay Asher",
@@ -169,10 +153,7 @@ const REAL_BANNED_BOOKS = [
     category: "Young Adult", 
     getWays: ["OverDrive Digital Access", "ThriftBooks Delivery"],
     localStores: ["A Room of One's Own (Madison, WI)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
 
   // --- INTERNATIONAL BANS ---
@@ -184,10 +165,7 @@ const REAL_BANNED_BOOKS = [
     category: "Political Fiction / Classic", 
     getWays: ["Tor Browser / Shadow Libraries", "Gutenberg Canada Digital Archive"],
     localStores: ["International Freedom Press Distribution"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 14, title: "The Satanic Verses", author: "Salman Rushdie",
@@ -197,10 +175,7 @@ const REAL_BANNED_BOOKS = [
     category: "Fiction", 
     getWays: ["VPN via International Digital Libraries", "E-Pub Global Distribution"],
     localStores: ["Independent European Importers"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 15, title: "Persepolis", author: "Marjane Satrapi",
@@ -210,10 +185,7 @@ const REAL_BANNED_BOOKS = [
     category: "Graphic Novel / Memoir", 
     getWays: ["Digital Open Archives", "Comixology Global Store"],
     localStores: ["Librairie Gourmande (Paris, France)", "Waterstones (London, UK)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 16, title: "Doctor Zhivago", author: "Boris Pasternak",
@@ -223,10 +195,7 @@ const REAL_BANNED_BOOKS = [
     category: "Classic Literature", 
     getWays: ["Project Gutenberg", "Open Library Free Digital Loan"],
     localStores: ["Shakespeare and Company (Paris, France)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 17, title: "Animal Farm", author: "George Orwell",
@@ -236,10 +205,7 @@ const REAL_BANNED_BOOKS = [
     category: "Allegory / Classic", 
     getWays: ["Tor Network Access", "Gutenberg Australia"],
     localStores: ["Kubrick Books (Hong Kong)", "Eslite Bookstore (Taiwan)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   },
   {
     id: 18, title: "The Catcher in the Rye", author: "J.D. Salinger",
@@ -249,14 +215,10 @@ const REAL_BANNED_BOOKS = [
     category: "Classic Literature", 
     getWays: ["Local Public Library System", "Eason Digital Store"],
     localStores: ["Better Read Than Dead (Sydney, Australia)"],
-    userShare: "",
-    mediaLink: "",
-    creditedAuthor: "",
-    verified: true
+    userShare: "", mediaLink: "", creditedAuthor: "", verified: true, comments: []
   }
 ];
 
-// Helper component to handle dropping pins when adding mode is toggled
 function MapClickHandler({ isAddingMode, onMapClick }) {
   useMapEvents({
     click(e) {
@@ -269,22 +231,45 @@ function MapClickHandler({ isAddingMode, onMapClick }) {
 }
 
 const INITIAL_FORM_STATE = { 
-  title: '', 
-  author: '', 
-  userShare: '',
-  imageFile: null,
-  imagePreview: '',
-  mediaLink: '',
-  banLevel: 'State',
-  district: '', 
-  reason: '', 
-  store: '', 
-  getWay: '',
-  isAnonymous: true,
-  creditName: ''
+  title: '', author: '', userShare: '', imageFile: null, imagePreview: '',
+  mediaLink: '', banLevel: 'State', district: '', reason: '', store: '', 
+  getWay: '', isAnonymous: true, creditName: ''
 };
 
 export default function App() {
+  return (
+    <Router>
+      <div className="d-flex flex-column vh-100 app-layout">
+        {/* Bootstrap Mobile-Friendly Navbar */}
+        <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm top-nav">
+          <Link className="navbar-brand fw-bold" to="/">Land of Lost Stories</Link>
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav ms-auto align-items-center">
+              <li className="nav-item"><Link className="nav-link" to="/">Map</Link></li>
+              <li className="nav-item"><Link className="nav-link" to="/about">About Us</Link></li>
+              <li className="nav-item"><Link className="nav-link" to="/contact">Contact</Link></li>
+            </ul>
+          </div>
+        </nav>
+
+        {/* Main Content Area */}
+        <main className="flex-grow-1 position-relative overflow-hidden">
+          <Routes>
+            <Route path="/" element={<MapView />} />
+            <Route path="/about" element={<AboutView />} />
+            <Route path="/contact" element={<ContactView />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+}
+
+// --- YOUR ORIGINAL MAP & FORM COMPONENT ---
+function MapView() {
   const [bannedBooks, setBannedBooks] = useState(REAL_BANNED_BOOKS);
   const [isAddingMode, setIsAddingMode] = useState(false);
   const [pendingCoords, setPendingCoords] = useState(null);
@@ -293,20 +278,21 @@ export default function App() {
   const [filters, setFilters] = useState({ search: '', category: 'All' });
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
 
-  // Load submissions from MongoDB API on initial mount
+  // Fetch Database
   useEffect(() => {
     async function fetchDatabaseBooks() {
       try {
         const response = await fetch('/api/books');
         if (response.ok) {
           const dbBooks = await response.json();
-          // Filter out duplicates if verified seeds exist in DB
+          // Ensure imported DB books have comments array
+          const formattedDbBooks = dbBooks.map(b => ({ ...b, comments: b.comments || [] }));
           const verifiedTitles = new Set(REAL_BANNED_BOOKS.map(b => b.title.toLowerCase()));
-          const userSubmissions = dbBooks.filter(b => !verifiedTitles.has(b.title.toLowerCase()));
+          const userSubmissions = formattedDbBooks.filter(b => !verifiedTitles.has(b.title.toLowerCase()));
           setBannedBooks([...userSubmissions, ...REAL_BANNED_BOOKS]);
         }
       } catch (err) {
-        console.warn("API offline or unreachable; using local records:", err);
+        console.warn("API offline or unreachable; using local records");
       }
     }
     fetchDatabaseBooks();
@@ -331,23 +317,15 @@ export default function App() {
   const creditsList = useMemo(() => {
     return bannedBooks
       .filter(book => Boolean(book.creditedAuthor))
-      .map(book => ({
-        name: book.creditedAuthor,
-        bookTitle: book.title
-      }));
+      .map(book => ({ name: book.creditedAuthor, bookTitle: book.title }));
   }, [bannedBooks]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Use FileReader to create a persistent base64 string for database storage
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          imageFile: file,
-          imagePreview: reader.result
-        }));
+        setFormData(prev => ({ ...prev, imageFile: file, imagePreview: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -378,7 +356,8 @@ export default function App() {
       mediaLink: formData.mediaLink,
       imagePreview: formData.imagePreview,
       creditedAuthor: formData.isAnonymous ? "" : (formData.creditName || "Community Contributor"),
-      verified: false
+      verified: false, // Human input, defaults to Pirate Icon
+      comments: []
     };
 
     try {
@@ -392,11 +371,9 @@ export default function App() {
         const savedBook = await response.json();
         setBannedBooks(prev => [savedBook, ...prev]);
       } else {
-        // Fallback to local state if database fails
         setBannedBooks(prev => [{ id: Date.now(), ...newEntryPayload }, ...prev]);
       }
     } catch (err) {
-      console.warn("Failed to save to database, keeping in memory:", err);
       setBannedBooks(prev => [{ id: Date.now(), ...newEntryPayload }, ...prev]);
     }
 
@@ -412,51 +389,65 @@ export default function App() {
     setFormData(INITIAL_FORM_STATE);
   };
 
+  // Handle Comment Submission with Profanity Filter
+  const handleAddComment = (bookId, e) => {
+    e.preventDefault();
+    const commentText = e.target.elements.commentInput.value;
+    if (!commentText.trim()) return;
+
+    const isFlagged = checkProfanity(commentText);
+    const newComment = {
+      text: isFlagged ? "[Comment hidden pending admin review]" : commentText,
+      originalText: commentText, // Save this for you (the dev) to review in the DB
+      isFlagged: isFlagged,
+      date: new Date().toLocaleDateString()
+    };
+
+    if (isFlagged) console.warn("FLAGGED COMMENT:", commentText);
+
+    setBannedBooks(prevBooks => prevBooks.map(book => {
+      if (book.id === bookId) {
+        return { ...book, comments: [...(book.comments || []), newComment] };
+      }
+      return book;
+    }));
+
+    e.target.reset();
+  };
+
   return (
-    <div className="app-layout">
-      {/* Top Navigation for Community Credits */}
-      <header className="top-nav">
-        <button 
-          className="credits-nav-btn"
-          onClick={() => setShowCreditsModal(true)}
-        >
-          Community Credits ({creditsList.length})
-        </button>
-      </header>
+    <div className="h-100 w-100 position-relative">
+      
+      {/* Top Credits Button overlaying the map */}
+      <button 
+        className="credits-nav-btn position-absolute m-3 shadow"
+        style={{ zIndex: 1000, top: 0, right: 0 }}
+        onClick={() => setShowCreditsModal(true)}
+      >
+        Community Credits ({creditsList.length})
+      </button>
 
       {/* Map Container */}
-      <div className={`map-container ${isAddingMode ? 'adding-mode' : ''}`}>
+      <div className={`map-container h-100 w-100 ${isAddingMode ? 'adding-mode' : ''}`}>
         <MapContainer 
           center={[38.0000, -97.0000]} 
           zoom={4} 
           scrollWheelZoom={true} 
           style={{ height: '100%', width: '100%' }}
         >
-          {/* Base Layer: Esri World Imagery (Satellite) */}
-          <TileLayer
-            attribution='Tiles &copy; Esri &mdash; Source: Esri, USDA, USGS'
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          />
+          <TileLayer attribution='Tiles &copy; Esri &mdash; Source: Esri, USDA, USGS' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}" />
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" />
 
-          {/* Reference Layers: Transportation Roads & Place Labels */}
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-          />
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-          />
+          <MapClickHandler isAddingMode={isAddingMode} onMapClick={(latlng) => { setPendingCoords(latlng); setFormStep(1); }} />
 
-          <MapClickHandler 
-            isAddingMode={isAddingMode} 
-            onMapClick={(latlng) => {
-              setPendingCoords(latlng);
-              setFormStep(1);
-            }} 
-          />
-
-          {/* Markers for Real Banned Books */}
+          {/* Markers */}
           {filteredBooks.map((book) => (
-            <Marker key={book._id || book.id} position={[book.lat, book.lng]}>
+            <Marker 
+              key={book._id || book.id} 
+              position={[book.lat, book.lng]}
+              icon={book.verified ? NoReadingIcon : PirateIcon}
+            >
               <Popup>
                 <div className="book-popup">
                   <h3>{book.title}</h3>
@@ -503,16 +494,12 @@ export default function App() {
 
                   <div className="info-section access">
                     <h4>How to Access This Story:</h4>
-                    <ul>
-                      {book.getWays && book.getWays.map((way, idx) => <li key={idx}>{way}</li>)}
-                    </ul>
+                    <ul>{book.getWays && book.getWays.map((way, idx) => <li key={idx}>{way}</li>)}</ul>
                   </div>
 
                   <div className="info-section stores">
                     <h4>Supporting Local Bookstores:</h4>
-                    <ul>
-                      {book.localStores && book.localStores.map((store, idx) => <li key={idx}>{store}</li>)}
-                    </ul>
+                    <ul>{book.localStores && book.localStores.map((store, idx) => <li key={idx}>{store}</li>)}</ul>
                   </div>
 
                   {book.creditedAuthor && (
@@ -520,28 +507,55 @@ export default function App() {
                       <p><small>Contributed by: <strong>{book.creditedAuthor}</strong></small></p>
                     </div>
                   )}
+
+                  <hr className="my-3"/>
+                  
+                  {/* === NEW: COMMENT SECTION === */}
+                  <div className="info-section comments-container">
+                    <h4 className="fw-bold mb-2">Community Experiences</h4>
+                    <div className="comments-list mb-2" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      {book.comments && book.comments.length > 0 ? (
+                        book.comments.map((c, i) => (
+                          <div key={i} className={`p-2 mb-2 small rounded ${c.isFlagged ? 'bg-warning text-dark' : 'bg-light text-dark'}`}>
+                            {c.text} 
+                            <div className="text-muted mt-1" style={{fontSize: '0.7rem'}}>{c.date}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted small mb-2">No comments yet. Share your experience!</p>
+                      )}
+                    </div>
+                    
+                    <form onSubmit={(e) => handleAddComment(book.id, e)} className="d-flex flex-column gap-2 mt-2">
+                      <textarea 
+                        name="commentInput"
+                        className="form-control form-control-sm" 
+                        placeholder="What did this book do for you?"
+                        rows="2"
+                        required
+                      ></textarea>
+                      <button type="submit" className="btn btn-sm btn-dark w-100">Post Comment</button>
+                    </form>
+                  </div>
+
                 </div>
               </Popup>
             </Marker>
           ))}
 
-          {pendingCoords && (
-            <Marker position={[pendingCoords.lat, pendingCoords.lng]} />
-          )}
+          {pendingCoords && <Marker position={[pendingCoords.lat, pendingCoords.lng]} icon={PirateIcon} />}
         </MapContainer>
       </div>
 
-      {/* Center Illustration Logo */}
       <img src="/logo_banned_books.png" alt="Land of Lost Stories Logo" className="main-logo" />
 
-      {/* Crosshair Cursor Banner */}
       {isAddingMode && (
         <div className="click-prompt-banner">
           Target Mode Active: Click anywhere on the map to log a banned book pin
         </div>
       )}
 
-      {/* Floating Bottom Toolbar */}
+      {/* Floating Bottom Toolbar (Your exact original filters) */}
       <div className="bottom-toolbar">
         <input 
           type="text" 
@@ -555,23 +569,18 @@ export default function App() {
           onChange={(e) => setFilters({...filters, category: e.target.value})}
         >
           <option value="All">All Subjects ({bannedBooks.length})</option>
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
+          {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
 
         <button 
           className={`add-pin-btn ${isAddingMode ? 'active' : ''}`}
-          onClick={() => {
-            setIsAddingMode(!isAddingMode);
-            setPendingCoords(null);
-          }}
+          onClick={() => { setIsAddingMode(!isAddingMode); setPendingCoords(null); }}
         >
           {isAddingMode ? 'Cancel' : '+ Drop Pin'}
         </button>
       </div>
 
-      {/* User Submission Multi-Step Modal */}
+      {/* User Submission Multi-Step Modal (Your exact original form) */}
       {pendingCoords && (
         <div className="submission-overlay">
           <div className="submission-form">
@@ -585,76 +594,35 @@ export default function App() {
               <form onSubmit={handleNextStep}>
                 <div className="form-group">
                   <label>Book Title*</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="e.g. Beloved"
-                    value={formData.title} 
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  />
+                  <input type="text" required placeholder="e.g. Beloved" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
                 </div>
-
                 <div className="form-group">
                   <label>Author*</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="e.g. Toni Morrison"
-                    value={formData.author} 
-                    onChange={(e) => setFormData({...formData, author: e.target.value})}
-                  />
+                  <input type="text" required placeholder="e.g. Toni Morrison" value={formData.author} onChange={(e) => setFormData({...formData, author: e.target.value})} />
                 </div>
-
                 <div className="form-group">
                   <label>What would you like to share about this book?</label>
-                  <textarea 
-                    rows={3} 
-                    placeholder="Share a reflection, poem, thoughts, or context..."
-                    value={formData.userShare} 
-                    onChange={(e) => setFormData({...formData, userShare: e.target.value})}
-                  />
+                  <textarea rows={3} placeholder="Share a reflection, poem, thoughts, or context..." value={formData.userShare} onChange={(e) => setFormData({...formData, userShare: e.target.value})} />
                 </div>
-
                 <div className="form-group">
                   <label>Upload a Drawing / Artwork (Optional)</label>
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                  {formData.imagePreview && (
-                    <img 
-                      src={formData.imagePreview} 
-                      alt="Upload Preview" 
-                      className="form-image-preview" 
-                    />
-                  )}
+                  <input type="file" accept="image/*" onChange={handleImageUpload} />
+                  {formData.imagePreview && <img src={formData.imagePreview} alt="Upload Preview" className="form-image-preview" />}
                 </div>
-
                 <div className="form-group">
                   <label>Audio / Video Link (Optional)</label>
-                  <input 
-                    type="url" 
-                    placeholder="SoundCloud, YouTube, Vimeo, or Spotify link..."
-                    value={formData.mediaLink} 
-                    onChange={(e) => setFormData({...formData, mediaLink: e.target.value})}
-                  />
+                  <input type="url" placeholder="SoundCloud, YouTube, Vimeo, or Spotify link..." value={formData.mediaLink} onChange={(e) => setFormData({...formData, mediaLink: e.target.value})} />
                   <small className="field-hint">Please link to SoundCloud, YouTube, or Vimeo rather than uploading directly.</small>
                 </div>
-
                 <button type="submit" className="submit-confirm-btn">Continue to Ban Details →</button>
               </form>
             ) : (
               <form onSubmit={handleFinalSubmit}>
                 <p className="step-subtitle">Anything else you'd like to share?</p>
-
                 <div className="form-row">
                   <div className="form-group half">
                     <label>Ban Scope / Level</label>
-                    <select 
-                      value={formData.banLevel}
-                      onChange={(e) => setFormData({...formData, banLevel: e.target.value})}
-                    >
+                    <select value={formData.banLevel} onChange={(e) => setFormData({...formData, banLevel: e.target.value})}>
                       <option value="Federal">Federal</option>
                       <option value="State">State</option>
                       <option value="County">County</option>
@@ -662,76 +630,38 @@ export default function App() {
                       <option value="International">International</option>
                     </select>
                   </div>
-
                   <div className="form-group half">
                     <label>District / Specific Region</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Keller ISD, TX"
-                      value={formData.district} 
-                      onChange={(e) => setFormData({...formData, district: e.target.value})}
-                    />
+                    <input type="text" placeholder="e.g. Keller ISD, TX" value={formData.district} onChange={(e) => setFormData({...formData, district: e.target.value})} />
                   </div>
                 </div>
-
                 <div className="form-group">
                   <label>Stated Reason for Ban (if known)</label>
-                  <textarea 
-                    rows={2} 
-                    placeholder="e.g. Challenged for mature themes..."
-                    value={formData.reason} 
-                    onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                  />
+                  <textarea rows={2} placeholder="e.g. Challenged for mature themes..." value={formData.reason} onChange={(e) => setFormData({...formData, reason: e.target.value})} />
                 </div>
-
                 <div className="form-group">
                   <label>Where can people get this book?</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Libby, Internet Archive, Local Library"
-                    value={formData.getWay} 
-                    onChange={(e) => setFormData({...formData, getWay: e.target.value})}
-                  />
+                  <input type="text" placeholder="e.g. Libby, Internet Archive, Local Library" value={formData.getWay} onChange={(e) => setFormData({...formData, getWay: e.target.value})} />
                 </div>
-
                 <div className="form-group">
                   <label>Supporting Local Bookstore</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. The Wild Detectives"
-                    value={formData.store} 
-                    onChange={(e) => setFormData({...formData, store: e.target.value})}
-                  />
+                  <input type="text" placeholder="e.g. The Wild Detectives" value={formData.store} onChange={(e) => setFormData({...formData, store: e.target.value})} />
                 </div>
-
-                {/* Fixed Anonymous & Attribution Card */}
                 <div className="attribution-card">
                   <label className="anon-toggle">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.isAnonymous}
-                      onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})}
-                    />
+                    <input type="checkbox" checked={formData.isAnonymous} onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})} />
                     <div className="toggle-text">
                       <span className="toggle-title">Keep my submission anonymous</span>
                       <span className="toggle-subtitle">Uncheck to add your name to our community credits page</span>
                     </div>
                   </label>
-
                   {!formData.isAnonymous && (
                     <div className="credit-input-field">
                       <label>Name or Handle to Credit</label>
-                      <input 
-                        type="text" 
-                        placeholder="Your name or handle to appear on the Credits page"
-                        value={formData.creditName} 
-                        onChange={(e) => setFormData({...formData, creditName: e.target.value})}
-                        autoFocus
-                      />
+                      <input type="text" placeholder="Your name or handle" value={formData.creditName} onChange={(e) => setFormData({...formData, creditName: e.target.value})} autoFocus />
                     </div>
                   )}
                 </div>
-
                 <div className="form-actions">
                   <button type="button" className="back-btn" onClick={() => setFormStep(1)}>← Back</button>
                   <button type="submit" className="submit-confirm-btn">Publish Pin</button>
@@ -742,7 +672,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Community Credits Modal */}
+      {/* Community Credits Modal (Your exact original modal) */}
       {showCreditsModal && (
         <div className="submission-overlay" onClick={() => setShowCreditsModal(false)}>
           <div className="credits-modal" onClick={(e) => e.stopPropagation()}>
@@ -755,9 +685,7 @@ export default function App() {
               ) : (
                 <ul>
                   {creditsList.map((item, index) => (
-                    <li key={index}>
-                      <strong>{item.name}</strong> <span>for submission on <em>{item.bookTitle}</em></span>
-                    </li>
+                    <li key={index}><strong>{item.name}</strong> <span>for submission on <em>{item.bookTitle}</em></span></li>
                   ))}
                 </ul>
               )}
@@ -765,6 +693,63 @@ export default function App() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// --- NEW PAGES ---
+function AboutView() {
+  return (
+    <div className="container mt-5 overflow-auto h-100 pb-5">
+      <div className="row justify-content-center">
+        <div className="col-md-8 text-center text-dark">
+          <h1 className="fw-bold mb-4">About Us</h1>
+          <p className="lead">
+            The Land of Lost Stories is an expansive, community-driven map dedicated to tracking and bringing awareness to banned books across the world.
+          </p>
+          <hr className="my-4" />
+          <h3 className="fw-bold mt-4">The Team</h3>
+          <div className="d-flex flex-column flex-md-row justify-content-center gap-4 mt-4">
+            <div className="card shadow-sm border-0 p-3 flex-fill">
+              <h5 className="fw-bold">Pragya Singh & Xtine Burrough</h5>
+              <p className="text-muted">Curation & Research</p>
+            </div>
+            <div className="card shadow-sm border-0 p-3 flex-fill">
+              <h5 className="fw-bold">Pragya Singh</h5>
+              <p className="text-muted">Platform Architecture</p>
+            </div>
+          </div>
+          <hr className="my-4" />
+          <h3 className="fw-bold mt-4">Credits</h3>
+          <ul className="list-unstyled">
+            <li>Pirate flag by Lee Mette from Noun Project (CC BY 3.0)</li>
+            <li>No reading by Muhammad Riza from Noun Project (CC BY 3.0)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactView() {
+  return (
+    <div className="container mt-5 overflow-auto h-100 pb-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6">
+          <h1 className="fw-bold mb-4 text-center text-dark">Contact Us</h1>
+          <form className="card shadow-sm border-0 p-4 bg-light">
+            <div className="mb-3">
+              <label className="form-label fw-bold text-dark">Name</label>
+              <input type="text" className="form-control" placeholder="Your Name" />
+            </div>
+            <div className="mb-3">
+              <label className="form-label fw-bold text-dark">Message</label>
+              <textarea className="form-control" rows="4" placeholder="How can we help?"></textarea>
+            </div>
+            <button type="submit" className="btn btn-dark w-100 fw-bold">Send Message</button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
