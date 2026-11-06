@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -219,6 +219,29 @@ const REAL_BANNED_BOOKS = [
   }
 ];
 
+// Recalculate Leaflet's dimensions when a tab is snapped or resized.
+function MapResizeHandler() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    let frame;
+    const refresh = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    };
+    const observer = new ResizeObserver(refresh);
+    observer.observe(container);
+    window.addEventListener('resize', refresh);
+    refresh();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', refresh);
+      cancelAnimationFrame(frame);
+    };
+  }, [map]);
+  return null;
+}
+
 function MapClickHandler({ isAddingMode, onMapClick }) {
   useMapEvents({
     click(e) {
@@ -239,11 +262,11 @@ const INITIAL_FORM_STATE = {
 export default function App() {
   return (
     <Router>
-      <div className="d-flex flex-column vh-100 app-layout">
+      <div className="app-layout">
         {/* Bootstrap Mobile-Friendly Navbar */}
-        <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm top-nav">
+        <nav className="navbar navbar-expand-lg navbar-dark top-nav">
           <Link className="navbar-brand fw-bold" to="/">Land of Lost Stories</Link>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span className="navbar-toggler-icon"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarNav">
@@ -256,7 +279,7 @@ export default function App() {
         </nav>
 
         {/* Main Content Area */}
-        <main className="flex-grow-1 position-relative overflow-hidden">
+        <main className="app-main">
           <Routes>
             <Route path="/" element={<MapView />} />
             <Route path="/about" element={<AboutView />} />
@@ -416,7 +439,7 @@ function MapView() {
   };
 
   return (
-    <div className="h-100 w-100 position-relative">
+    <div className="map-view">
       
       {/* Top Credits Button overlaying the map */}
       <button 
@@ -440,6 +463,8 @@ function MapView() {
           <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" />
 
           <MapClickHandler isAddingMode={isAddingMode} onMapClick={(latlng) => { setPendingCoords(latlng); setFormStep(1); }} />
+
+          <MapResizeHandler />
 
           {/* Markers */}
           {filteredBooks.map((book) => (
@@ -697,59 +722,192 @@ function MapView() {
   );
 }
 
-// --- NEW PAGES ---
-function AboutView() {
+// ==========================================
+// ILLUSTRATED PAGES — THE CAPTAIN'S JOURNAL
+// ==========================================
+
+function CompassRose({ small = false }) {
   return (
-    <div className="container mt-5 overflow-auto h-100 pb-5">
-      <div className="row justify-content-center">
-        <div className="col-md-8 text-center text-dark">
-          <h1 className="fw-bold mb-4">About Us</h1>
-          <p className="lead">
-            The Land of Lost Stories is an expansive, community-driven map dedicated to tracking and bringing awareness to banned books across the world.
-          </p>
-          <hr className="my-4" />
-          <h3 className="fw-bold mt-4">The Team</h3>
-          <div className="d-flex flex-column flex-md-row justify-content-center gap-4 mt-4">
-            <div className="card shadow-sm border-0 p-3 flex-fill">
-              <h5 className="fw-bold">Pragya Singh & Xtine Burrough</h5>
-              <p className="text-muted">Curation & Research</p>
-            </div>
-            <div className="card shadow-sm border-0 p-3 flex-fill">
-              <h5 className="fw-bold">Pragya Singh</h5>
-              <p className="text-muted">Platform Architecture</p>
-            </div>
-          </div>
-          <hr className="my-4" />
-          <h3 className="fw-bold mt-4">Credits</h3>
-          <ul className="list-unstyled">
-            <li>Pirate flag by Lee Mette from Noun Project (CC BY 3.0)</li>
-            <li>No reading by Muhammad Riza from Noun Project (CC BY 3.0)</li>
-          </ul>
+    <svg
+      className={`compass-rose ${small ? 'compass-rose-small' : ''}`}
+      viewBox="0 0 160 160"
+      role="img"
+      aria-label="Decorative eight-point compass rose"
+    >
+      <circle cx="80" cy="80" r="67" fill="none" stroke="currentColor" strokeWidth="1" />
+      <circle cx="80" cy="80" r="58" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 5" />
+      <path d="M80 9 L91 69 L151 80 L91 91 L80 151 L69 91 L9 80 L69 69 Z" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M80 16 L88 75 L80 80 Z M144 80 L85 88 L80 80 Z M80 144 L72 85 L80 80 Z M16 80 L75 72 L80 80 Z" fill="currentColor" />
+      <path d="M34 34 L74 72 L80 80 L72 74 Z M126 34 L88 74 L80 80 L86 72 Z M126 126 L86 88 L80 80 L88 86 Z M34 126 L72 86 L80 80 L74 88 Z" fill="currentColor" opacity=".5" />
+      <circle cx="80" cy="80" r="7" fill="var(--paper-color, #e8d6ad)" stroke="currentColor" />
+      <text x="80" y="7" textAnchor="middle" fontSize="9" fill="currentColor">N</text>
+      <text x="80" y="158" textAnchor="middle" fontSize="9" fill="currentColor">S</text>
+      <text x="3" y="83" textAnchor="middle" fontSize="9" fill="currentColor">W</text>
+      <text x="157" y="83" textAnchor="middle" fontSize="9" fill="currentColor">E</text>
+    </svg>
+  );
+}
+
+function WaveRule() {
+  return (
+    <div className="wave-rule" aria-hidden="true">
+      <span />
+      <span className="wave-rule-star">✦</span>
+      <span />
+    </div>
+  );
+}
+
+function JournalFrame({ children, narrow = false, className = '' }) {
+  return (
+    <div className={`sea-scene ${className}`}>
+      <div className="sea-stars" aria-hidden="true">✧ &nbsp; · &nbsp; ✦ &nbsp; · &nbsp; ✧</div>
+      <div className="journal-wrap">
+        <div className={`journal-paper ${narrow ? 'journal-paper-narrow' : ''}`}>
+          <span className="corner-etch corner-top-left" aria-hidden="true">✦</span>
+          <span className="corner-etch corner-top-right" aria-hidden="true">✦</span>
+          <span className="corner-etch corner-bottom-left" aria-hidden="true">✦</span>
+          <span className="corner-etch corner-bottom-right" aria-hidden="true">✦</span>
+          {children}
         </div>
       </div>
+      <div className="sea-bottom-waves" aria-hidden="true" />
     </div>
+  );
+}
+
+function AboutView() {
+  return (
+    <JournalFrame className="about-scene">
+      <header className="journal-masthead">
+        <p className="journal-kicker">AN ATLAS OF THE STORIES THEY TRIED TO HIDE</p>
+        <div className="masthead-illustration">
+          <span className="masthead-route" aria-hidden="true">· · · · · · · · ·</span>
+          <CompassRose />
+          <span className="masthead-route" aria-hidden="true">· · · · · · · · ·</span>
+        </div>
+        <h1>Here Be Stories</h1>
+        <p className="masthead-subtitle">A captain’s log of lost and found words</p>
+        <WaveRule />
+      </header>
+
+      <div className="journal-body">
+        <section className="journal-chapter" aria-labelledby="mission-title">
+          <div className="chapter-label"><span>LOG ENTRY 001</span><span>THE PURPOSE</span></div>
+          <h2 id="mission-title">Not all treasure is buried.</h2>
+          <p className="journal-lead">
+            Some of it lives between the covers of a book.
+          </p>
+          <p>
+            The Land of Lost Stories is a community-driven map dedicated to
+            tracking and bringing awareness to banned books across the world.
+            Each pin marks a place where a story has been challenged, restricted,
+            or removed, and offers a way to find out more.
+          </p>
+          <p>
+            Follow the map, explore the stories, and add your own reflections.
+            The point isn’t to tell you what to read. It’s to make the paths
+            to these stories easier to discover.
+          </p>
+          <div className="handwritten-aside"><span aria-hidden="true">↳</span> Every pin has a story behind it.</div>
+        </section>
+
+        <section className="journal-chapter crew-section" aria-labelledby="crew-title">
+          <WaveRule />
+          <div className="chapter-label"><span>LOG ENTRY 002</span><span>THE CREW</span></div>
+          <h2 id="crew-title">The hands at the helm.</h2>
+          <div className="crew-ledger">
+            <article className="crew-row">
+              <span className="crew-ink-number">01</span>
+              <div><h3>Pragya Singh &amp; Xtine Burrough</h3><p>Curation &amp; Research</p></div>
+              <span className="ledger-mark" aria-hidden="true">✧</span>
+            </article>
+            <article className="crew-row">
+              <span className="crew-ink-number">02</span>
+              <div><h3>Pragya Singh</h3><p>Platform Architecture</p></div>
+              <span className="ledger-mark" aria-hidden="true">✧</span>
+            </article>
+          </div>
+        </section>
+
+        <section className="journal-chapter credits-section" aria-labelledby="credits-title">
+          <WaveRule />
+          <div className="chapter-label"><span>LOG ENTRY 003</span><span>THE MAKERS’ MARKS</span></div>
+          <h2 id="credits-title">A few names in the margins.</h2>
+          <p>Even a good map borrows a symbol or two. Credit where it belongs:</p>
+          <ul className="ink-credits">
+            <li>Pirate flag icon by Lee Mette from Noun Project (CC BY 3.0)</li>
+            <li>No reading icon by Muhammad Riza from Noun Project (CC BY 3.0)</li>
+          </ul>
+        </section>
+      </div>
+
+      <footer className="journal-signoff">
+        <span className="signoff-seal" aria-hidden="true">✦</span>
+        <p>May no story remain lost.</p>
+        <Link to="/" className="ink-link">← Back to the map</Link>
+      </footer>
+    </JournalFrame>
+  );
+}
+
+function BottleIllustration() {
+  return (
+    <svg className="bottle-art" viewBox="0 0 200 250" role="img" aria-label="An illustrated bottle holding a rolled message">
+      <path d="M82 18 Q100 10 118 18 L117 43 Q116 58 129 71 Q159 96 160 160 L160 203 Q158 228 135 230 L65 230 Q42 226 40 203 L40 160 Q42 96 71 71 Q84 58 83 43 Z" fill="none" stroke="currentColor" strokeWidth="3" />
+      <path d="M79 15 Q100 8 121 15 M80 22 L120 22 M84 41 L116 41" fill="none" stroke="currentColor" strokeWidth="3" />
+      <rect x="85" y="8" width="30" height="15" rx="4" fill="var(--paper-color, #e8d6ad)" stroke="currentColor" strokeWidth="2" />
+      <path d="M51 154 Q99 140 149 154 L149 205 Q130 216 100 216 Q65 216 51 205 Z" fill="currentColor" opacity=".1" />
+      <path d="M69 113 Q91 105 118 113 L129 180 Q101 193 78 183 Z" fill="var(--paper-color, #e8d6ad)" stroke="currentColor" strokeWidth="2.5" transform="rotate(-9 100 150)" />
+      <path d="M82 132 L114 127 M81 143 L116 138 M80 154 L110 150" fill="none" stroke="currentColor" strokeWidth="1.5" opacity=".6" />
+      <path d="M66 84 Q55 96 51 115" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" opacity=".4" />
+      <path d="M30 226 Q55 216 80 226 T130 226 T180 226" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="5 5" />
+      <path d="M23 63 L31 63 M27 59 L27 67 M168 92 L176 92 M172 88 L172 96" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
   );
 }
 
 function ContactView() {
   return (
-    <div className="container mt-5 overflow-auto h-100 pb-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <h1 className="fw-bold mb-4 text-center text-dark">Contact Us</h1>
-          <form className="card shadow-sm border-0 p-4 bg-light">
-            <div className="mb-3">
-              <label className="form-label fw-bold text-dark">Name</label>
-              <input type="text" className="form-control" placeholder="Your Name" />
-            </div>
-            <div className="mb-3">
-              <label className="form-label fw-bold text-dark">Message</label>
-              <textarea className="form-control" rows="4" placeholder="How can we help?"></textarea>
-            </div>
-            <button type="submit" className="btn btn-dark w-100 fw-bold">Send Message</button>
-          </form>
-        </div>
-      </div>
-    </div>
+    <JournalFrame narrow className="contact-scene">
+      <header className="journal-masthead contact-masthead">
+        <p className="journal-kicker">POST OFFICE OF THE OPEN SEAS</p>
+        <BottleIllustration />
+        <h1>A Message in a Bottle</h1>
+        <p className="masthead-subtitle">Words travel farther than ships.</p>
+        <WaveRule />
+      </header>
+
+      <section className="journal-chapter contact-chapter" aria-labelledby="contact-letter-title">
+        <div className="chapter-label"><span>CORRESPONDENCE</span><span>TO THE CREW</span></div>
+        <h2 id="contact-letter-title">Have something to tell us?</h2>
+        <p>
+          Found a story we should know about? Have a question about the project,
+          or an idea for the map? We'd love to hear what you've discovered.
+        </p>
+        <p>Write a note below. The bottle is still being fitted for its voyage.</p>
+
+        <form className="bottle-form" onSubmit={(event) => event.preventDefault()}>
+          <div className="letter-field">
+            <label htmlFor="contact-name">From the desk of</label>
+            <input id="contact-name" name="name" type="text" autoComplete="name" placeholder="Your name" />
+          </div>
+          <div className="letter-field">
+            <label htmlFor="contact-message">Your message</label>
+            <textarea id="contact-message" name="message" rows="5" placeholder="Dear crew, ..." />
+          </div>
+          <button className="bottle-submit" type="button" disabled title="Message delivery has not been connected yet">
+            <span aria-hidden="true">✉</span> Bottle service coming soon
+          </button>
+          <p className="form-footnote">The form isn't connected to a mailbox yet, so messages cannot be sent from this page.</p>
+        </form>
+      </section>
+
+      <footer className="journal-signoff">
+        <span className="signoff-seal" aria-hidden="true">✦</span>
+        <p>Until our paths cross again.</p>
+        <Link to="/" className="ink-link">← Back to the map</Link>
+      </footer>
+    </JournalFrame>
   );
 }
