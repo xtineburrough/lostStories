@@ -1,4 +1,10 @@
+# Environment variables and secrets
 .env
-.vercel
-node_modules
+.env.*
+!.env.example
 
+# Dependencies
+node_modules/
+
+# Build output
+dist/
